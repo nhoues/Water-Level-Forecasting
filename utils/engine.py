@@ -33,59 +33,68 @@ class AverageMeter:
         self.avg = self.sum / self.count
 
 
-def loss_fn(y_hat , y ) : 
-    return nn.MSELoss()(y_hat,y)
+def loss_fn(y_hat, y):
+    return nn.MSELoss()(y_hat, y)
 
-def train_fn( data_loader, model, optimizer, device):
+
+def train_fn(data_loader, model, optimizer, device, verbose):
     """
     computes the model training for one epoch
     """
     model.train()
     tr_loss = 0
     counter = 0
-    losses = AverageMeter()
-    tk0 = tqdm(enumerate(data_loader), total=len(data_loader))
+    if verbose:
+        losses = AverageMeter()
+        tk0 = tqdm(enumerate(data_loader), total=len(data_loader))
+    else:
+        tk0 = enumerate(data_loader)
 
     for bi, d in tk0:
-        targets = d["target"].to(device, dtype=torch.float).view(-1,1)
+        targets = d["target"].to(device, dtype=torch.float).view(-1, 1)
         enc = d["num_feat"].to(device, dtype=torch.float)
         day = d["dayOfweek"].to(device, dtype=torch.long)
         hour = d["hour"].to(device, dtype=torch.long)
         optimizer.zero_grad()
-        outputs = model(enc,day,hour)
-        loss = loss_fn(outputs,targets)
-        
+        outputs = model(enc, day, hour)
+        loss = loss_fn(outputs, targets)
+
         tr_loss += loss.item()
         counter += 1
         loss.backward()
         optimizer.step()
-        losses.update(loss.item(), targets.size(0))
-        tk0.set_postfix(loss=losses.avg)
-        
+        if verbose:
+            losses.update(loss.item(), targets.size(0))
+            tk0.set_postfix(loss=losses.avg)
     return tr_loss / counter
 
 
-def eval_fn(data_loader, model, device):
+def eval_fn(data_loader, model, device, verbose):
     """
     computes the model evaluation for one epoch
     """
     model.eval()
     fin_loss = 0
     counter = 0
-    losses = AverageMeter()
-    tk0 = tqdm(enumerate(data_loader), total=len(data_loader))
+    if verbose:
+        losses = AverageMeter()
+        tk0 = tqdm(enumerate(data_loader), total=len(data_loader))
+    else:
+        tk0 = enumerate(data_loader)
     with torch.no_grad():
         for bi, d in tk0:
-            targets = d["target"].to(device, dtype=torch.float).view(-1,1)
+            targets = d["target"].to(device, dtype=torch.float).view(-1, 1)
             enc = d["num_feat"].to(device, dtype=torch.float)
             day = d["dayOfweek"].to(device, dtype=torch.long)
             hour = d["hour"].to(device, dtype=torch.long)
-            outputs = model(enc,day,hour)
+            outputs = model(enc, day, hour)
             loss = loss_fn(outputs, targets)
             fin_loss += loss.item()
             counter += 1
-            losses.update(loss.item(), targets.size(0))
-            tk0.set_postfix(loss=losses.avg)
+            if verbose:
+                losses.update(loss.item(), targets.size(0))
+                tk0.set_postfix(loss=losses.avg)
+
         return fin_loss / counter
 
 
@@ -99,6 +108,7 @@ def run(
     VALID_BATCH_SIZE,
     device,
     path,
+    verbose,
 ):
     """
     trains a given model for a given number of epochs and paramters
@@ -112,29 +122,39 @@ def run(
     num_train_steps = int(len(train_data_loader)) * EPOCHS
     optimizer = AdamW(model.parameters(), lr=lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, factor=0.1, patience=5 
+        optimizer, factor=0.1, patience=5
     )
     train_loss = []
     val_loss = []
     best = 50000
     patience = 0
     for epoch in range(EPOCHS):
-        print(f"--------- Epoch {epoch} ---------")
+        if verbose:
+            print(f"--------- Epoch {epoch} ---------")
+        elif epoch % 10 == 0:
+            print(f"--------- Epoch {epoch} ---------")
+
         tr_loss = train_fn(
             train_data_loader,
             model,
             optimizer,
             device,
+            verbose,
         )
         train_loss.append(tr_loss)
-        print(f" train_loss  = {tr_loss}")
-        val = eval_fn(
-            valid_data_loader, model, device, 
-        )
+        if verbose:
+            print(f" train_loss  = {tr_loss}")
+        elif epoch % 10 == 0:
+            print(f" train_loss  = {tr_loss}")
+
+        val = eval_fn(valid_data_loader, model, device, verbose)
         val_loss.append(val)
         scheduler.step(val)
-        print(f" val_loss  = {val}")
-        
+        if verbose:
+            print(f" val_loss  = {val}")
+        elif epoch % 10 == 0:
+            print(f" val_loss  = {val}")
+
         if val < best:
             best = val
             patience = 0
@@ -145,7 +165,7 @@ def run(
             print(f"Eraly Stopping on Epoch {epoch}")
             print(f"Best Loss =  {best}")
             break
-            
+
     model.load_state_dict(torch.load(path), strict=False)
     return val_loss, train_loss
 
@@ -166,7 +186,7 @@ def predict(model, dataset, device=torch.device("cuda")):
             enc = d["num_feat"].to(device, dtype=torch.float)
             day = d["dayOfweek"].to(device, dtype=torch.long)
             hour = d["hour"].to(device, dtype=torch.long)
-            outputs = model(enc,day,hour)
+            outputs = model(enc, day, hour)
             if bi == 0:
                 out = outputs
             else:

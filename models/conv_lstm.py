@@ -7,28 +7,32 @@ import torch.nn.functional as F
 from .modules import *
 
 
-class StackedLSTMs(nn.Module):
+class ConvLSTM(nn.Module):
     """
     Computes an encoder based on LSTM layers
     """
 
     def __init__(self, input_size, hidden_size):
-        super(StackedLSTMs, self).__init__()
+        super(ConvLSTM, self).__init__()
 
         self.day_emb = nn.Embedding(7, 4)
         self.hour_emb = nn.Embedding(24, 12)
 
         self.init_batchnorm = TimeDistributed(nn.BatchNorm1d(input_size, momentum=0.01))
 
-        self.LSTM1 = nn.LSTM(
-            input_size=input_size + 16,
-            hidden_size=hidden_size,
-            batch_first=True,
-            bidirectional=True,
+        self.conv = nn.Sequential(
+            nn.Conv1d(
+                in_channels=input_size + 16,
+                out_channels=hidden_size,
+                kernel_size=2,
+                padding=True,
+            ),
+            nn.ReLU(inplace=True),
+            nn.MaxPool1d(kernel_size=2, stride=2),
         )
 
-        self.LSTM2 = nn.LSTM(
-            input_size=hidden_size * 2,
+        self.LSTM = nn.LSTM(
+            input_size=hidden_size,
             hidden_size=hidden_size,
             batch_first=True,
             bidirectional=True,
@@ -47,7 +51,9 @@ class StackedLSTMs(nn.Module):
         hour = self.hour_emb(hour)
         enc = self.init_batchnorm(enc)
         enc = torch.cat([enc, hour, day], dim=2)
-        x_hat, _ = self.LSTM1(enc)
-        x_hat, _ = self.LSTM2(x_hat)
+        enc = enc.permute(0, 2, 1)
+        enc = self.conv(enc)
+        enc = enc.permute(0, 2, 1)
+        x_hat, _ = self.LSTM(enc)
         x_hat = self.fc(x_hat[:, -1, :])
         return x_hat
