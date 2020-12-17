@@ -49,6 +49,6 @@ class ConvTransformer(nn.Module):
         enc = enc.permute(0, 2, 1)
         enc = self.conv(enc)
         enc = enc.permute(0, 2, 1)
-        x_hat, _ = self.LSTM(enc)
+        x_hat , _ = self.transformer(enc)
         x_hat = self.fc(x_hat[:, -1, :])
         return x_hat
