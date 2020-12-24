@@ -33,11 +33,44 @@ class AverageMeter:
         self.avg = self.sum / self.count
 
 
-def loss_fn(y_hat, y):
+def L2_loss_fn(y_hat, y):
     return nn.MSELoss()(y_hat, y)
 
 
-def train_fn(data_loader, model, optimizer, device, verbose):
+def L1_loss_fn(y_hat, y):
+    return nn.L1Loss()(y_hat, y)
+
+
+def train_fn_autoencoder(data_loader, model, optimizer, device, verbose):
+    """
+    computes the model training for one epoch
+    """
+    model.train()
+    tr_loss = 0
+    counter = 0
+    if verbose:
+        losses = AverageMeter()
+        tk0 = tqdm(enumerate(data_loader), total=len(data_loader))
+    else:
+        tk0 = enumerate(data_loader)
+
+    for bi, d in tk0:
+        targets = d["target"].to(device, dtype=torch.float).view(-1, 1)
+        enc = d["num_feat"].to(device, dtype=torch.float)
+        optimizer.zero_grad()
+        outputs, _ = model(enc)
+        loss = L1_loss_fn(outputs, enc)
+        tr_loss += loss.item()
+        counter += 1
+        loss.backward()
+        optimizer.step()
+        if verbose:
+            losses.update(loss.item(), targets.size(0))
+            tk0.set_postfix(loss=losses.avg)
+    return tr_loss / counter
+
+
+def train_fn_forcaster(data_loader, model, optimizer, device, verbose):
     """
     computes the model training for one epoch
     """
@@ -69,7 +102,34 @@ def train_fn(data_loader, model, optimizer, device, verbose):
     return tr_loss / counter
 
 
-def eval_fn(data_loader, model, device, verbose):
+def eval_fn_autoencoder(data_loader, model, device, verbose):
+    """
+    computes the model evaluation for one epoch
+    """
+    model.eval()
+    fin_loss = 0
+    counter = 0
+    if verbose:
+        losses = AverageMeter()
+        tk0 = tqdm(enumerate(data_loader), total=len(data_loader))
+    else:
+        tk0 = enumerate(data_loader)
+    with torch.no_grad():
+        for bi, d in tk0:
+
+            enc = d["num_feat"].to(device, dtype=torch.float)
+            outputs, _ = model(enc)
+            loss = L1_loss_fn(outputs, enc)
+            fin_loss += loss.item()
+            counter += 1
+            if verbose:
+                losses.update(loss.item(), targets.size(0))
+                tk0.set_postfix(loss=losses.avg)
+
+        return fin_loss / counter
+
+
+def eval_fn_forcaster(data_loader, model, device, verbose):
     """
     computes the model evaluation for one epoch
     """
@@ -109,6 +169,7 @@ def run(
     device,
     path,
     verbose,
+    is_forcaster,
 ):
     """
     trains a given model for a given number of epochs and paramters
@@ -134,20 +195,28 @@ def run(
         elif epoch % 10 == 0:
             print(f"--------- Epoch {epoch} ---------")
 
-        tr_loss = train_fn(
-            train_data_loader,
-            model,
-            optimizer,
-            device,
-            verbose,
-        )
+        if is_forcaster:
+            tr_loss = train_fn_forcaster(
+                train_data_loader, model, optimizer, device, verbose,
+            )
+
+        else:
+
+            tr_loss = train_fn_autoencoder(
+                train_data_loader, model, optimizer, device, verbose,
+            )
+
         train_loss.append(tr_loss)
         if verbose:
             print(f" train_loss  = {tr_loss}")
         elif epoch % 10 == 0:
             print(f" train_loss  = {tr_loss}")
 
-        val = eval_fn(valid_data_loader, model, device, verbose)
+        if is_forcaster:
+            val = eval_fn_forcaster(valid_data_loader, model, device, verbose)
+        else:
+            val = eval_fn_autoencoder(valid_data_loader, model, device, verbose)
+
         val_loss.append(val)
         scheduler.step(val)
         if verbose:
@@ -187,6 +256,29 @@ def predict(model, dataset, device=torch.device("cuda")):
             day = d["dayOfweek"].to(device, dtype=torch.long)
             hour = d["hour"].to(device, dtype=torch.long)
             outputs = model(enc, day, hour)
+            if bi == 0:
+                out = outputs
+            else:
+                out = torch.cat([out, outputs], dim=0)
+    return out.cpu().detach().numpy()
+
+
+def predict_outliers(model, dataset, device=torch.device("cuda")):
+    """
+    computes the prediction a given model and data
+    """
+    model.eval()
+    data_loader = torch.utils.data.DataLoader(
+        dataset, batch_size=64, num_workers=4, shuffle=False
+    )
+    losses = AverageMeter()
+    rmse = AverageMeter()
+    tk0 = tqdm(enumerate(data_loader), total=len(data_loader))
+    with torch.no_grad():
+        for bi, d in tk0:
+            enc = d["num_feat"].to(device, dtype=torch.float)
+            outputs, _ = model(enc)
+            outputs = nn.L1Loss(reduce=False)(enc, outputs)[:, -1, :].mean(dim=1)
             if bi == 0:
                 out = outputs
             else:
