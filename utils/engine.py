@@ -65,7 +65,7 @@ def train_fn_autoencoder(data_loader, model, optimizer, device, verbose):
         loss.backward()
         optimizer.step()
         if verbose:
-            losses.update(loss.item(), targets.size(0))
+            losses.update(loss.item(), enc.size(0))
             tk0.set_postfix(loss=losses.avg)
     return tr_loss / counter
 
