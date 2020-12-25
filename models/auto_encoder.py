@@ -55,3 +55,48 @@ class AutoEncoder(nn.Module):
         x_map = self.mapping_layer(x)
         x = self.decoder(x_map)
         return x, x_map
+    
+class LSTMAutoEncoder(nn.Module) : 
+    
+    def __init__(self, input_size, hidden_size , emb_size):
+        super(StackedLSTMs, self).__init__()
+        
+        self.day_emb = nn.Embedding(7, 4)
+        self.hour_emb = nn.Embedding(24, 12)
+
+        self.init_batchnorm = TimeDistributed(nn.BatchNorm1d(input_size, momentum=0.01))
+        
+        self.auto_encoder = AutoEncoder(input_size , hidden_size, emb_size)
+        
+        self.LSTM1 = nn.LSTM(
+            input_size= emb_size + 16,
+            hidden_size=hidden_size,
+            batch_first=True,
+            bidirectional=True,
+        )
+
+        self.LSTM2 = nn.LSTM(
+            input_size=hidden_size * 2,
+            hidden_size=hidden_size,
+            batch_first=True,
+            bidirectional=True,
+        )
+        
+        self.fc = nn.Sequential(
+            nn.Linear(2 * hidden_size, 64),
+            nn.ReLU(inplace=True),
+            nn.Linear(64, 32),
+            nn.ReLU(inplace=True),
+            nn.Linear(32, 1),
+        )
+
+    def forward(self, enc, day, hour):
+        day = self.day_emb(day)
+        hour = self.hour_emb(hour)
+        enc = self.init_batchnorm(enc)
+        x_rec , x_map = self.auto_encoder(enc)
+        x_map = torch.cat([x_map, hour, day], dim=2)
+        x_hat, _ = self.LSTM1(x_map)
+        x_hat, _ = self.LSTM2(x_hat)
+        x_hat = self.fc(x_hat[:, -1, :])
+        return x_hat , x_rec
