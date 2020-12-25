@@ -90,7 +90,7 @@ def train_fn_forcaster(data_loader, model, optimizer, device, verbose):
         hour = d["hour"].to(device, dtype=torch.long)
         optimizer.zero_grad()
         outputs = model(enc, day, hour)
-        loss = loss_fn(outputs, targets)
+        loss = L2_loss_fn(outputs, targets)
 
         tr_loss += loss.item()
         counter += 1
@@ -148,7 +148,7 @@ def eval_fn_forcaster(data_loader, model, device, verbose):
             day = d["dayOfweek"].to(device, dtype=torch.long)
             hour = d["hour"].to(device, dtype=torch.long)
             outputs = model(enc, day, hour)
-            loss = loss_fn(outputs, targets)
+            loss = L2_loss_fn(outputs, targets)
             fin_loss += loss.item()
             counter += 1
             if verbose:
