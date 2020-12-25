@@ -11,7 +11,7 @@ class hydro_dataset:
         self.window_size = window_size
         self.num_feat = num_feat
         self.cat_feat = cat_feat
-        self.target = data.Value.values[window_size:]
+        self.target = data.WL_pct.values[window_size:]
 
         if is_auto_encoder:
             final_step = -1
