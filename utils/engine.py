@@ -213,7 +213,7 @@ def run(
         else:
 
             tr_loss = train_fn_autoencoder(
-                train_data_loader, model, optimizer, device, verbose, is_added_auto_encoder
+                train_data_loader, model, optimizer, device, verbose
             )
 
         train_loss.append(tr_loss)
@@ -223,9 +223,9 @@ def run(
             print(f" train_loss  = {tr_loss}")
 
         if is_forcaster:
-            val = eval_fn_forcaster(valid_data_loader, model, device, verbose)
+            val = eval_fn_forcaster(valid_data_loader, model, device, verbose , is_added_auto_encoder)
         else:
-            val = eval_fn_autoencoder(valid_data_loader, model, device, verbose)
+            val = eval_fn_autoencoder(valid_data_loader, model, device, verbose, is_added_auto_encoder)
 
         val_loss.append(val)
         scheduler.step(val)

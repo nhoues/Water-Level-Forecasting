@@ -59,7 +59,7 @@ class AutoEncoder(nn.Module):
 class LSTMAutoEncoder(nn.Module) : 
     
     def __init__(self, input_size, hidden_size , emb_size):
-        super(StackedLSTMs, self).__init__()
+        super(LSTMAutoEncoder, self).__init__()
         
         self.day_emb = nn.Embedding(7, 4)
         self.hour_emb = nn.Embedding(24, 12)
