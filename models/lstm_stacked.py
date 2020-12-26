@@ -16,7 +16,7 @@ class StackedLSTMs(nn.Module):
         super(StackedLSTMs, self).__init__()
 
         self.day_emb = nn.Embedding(7, 4)
-        self.month_emb = nn.Embedding(12, 4)
+        self.month_emb = nn.Embedding(13, 4)
 
         self.init_batchnorm = TimeDistributed(nn.BatchNorm1d(input_size, momentum=0.01))
 
