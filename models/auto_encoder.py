@@ -62,14 +62,14 @@ class LSTMAutoEncoder(nn.Module) :
         super(LSTMAutoEncoder, self).__init__()
         
         self.day_emb = nn.Embedding(7, 4)
-        self.hour_emb = nn.Embedding(24, 12)
+        self.month_emb = nn.Embedding(12, 4)
 
         self.init_batchnorm = TimeDistributed(nn.BatchNorm1d(input_size, momentum=0.01))
         
         self.auto_encoder = AutoEncoder(input_size , hidden_size, emb_size)
         
         self.LSTM1 = nn.LSTM(
-            input_size= emb_size + 16,
+            input_size= emb_size + 8,
             hidden_size=hidden_size,
             batch_first=True,
             bidirectional=True,
@@ -90,12 +90,12 @@ class LSTMAutoEncoder(nn.Module) :
             nn.Linear(32, 1),
         )
 
-    def forward(self, enc, day, hour):
+    def forward(self, enc, day, month):
         day = self.day_emb(day)
-        hour = self.hour_emb(hour)
+        month = self.month_emb(month)
         enc = self.init_batchnorm(enc)
         x_rec , x_map = self.auto_encoder(enc)
-        x_map = torch.cat([x_map, hour, day], dim=2)
+        x_map = torch.cat([x_map, month, day], dim=2)
         x_hat, _ = self.LSTM1(x_map)
         x_hat, _ = self.LSTM2(x_hat)
         x_hat = self.fc(x_hat[:, -1, :])

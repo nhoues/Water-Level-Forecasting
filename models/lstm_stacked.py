@@ -16,12 +16,12 @@ class StackedLSTMs(nn.Module):
         super(StackedLSTMs, self).__init__()
 
         self.day_emb = nn.Embedding(7, 4)
-        self.hour_emb = nn.Embedding(24, 12)
+        self.month_emb = nn.Embedding(12, 4)
 
         self.init_batchnorm = TimeDistributed(nn.BatchNorm1d(input_size, momentum=0.01))
 
         self.LSTM1 = nn.LSTM(
-            input_size=input_size + 16,
+            input_size=input_size + 8,
             hidden_size=hidden_size,
             batch_first=True,
             bidirectional=True,
@@ -42,11 +42,11 @@ class StackedLSTMs(nn.Module):
             nn.Linear(32, 1),
         )
 
-    def forward(self, enc, day, hour):
+    def forward(self, enc, day, month):
         day = self.day_emb(day)
-        hour = self.hour_emb(hour)
+        month = self.month_emb(month)
         enc = self.init_batchnorm(enc)
-        enc = torch.cat([enc, hour, day], dim=2)
+        enc = torch.cat([enc, month, day], dim=2)
         x_hat, _ = self.LSTM1(enc)
         x_hat, _ = self.LSTM2(x_hat)
         x_hat = self.fc(x_hat[:, -1, :])
