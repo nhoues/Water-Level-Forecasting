@@ -70,7 +70,9 @@ def train_fn_autoencoder(data_loader, model, optimizer, device, verbose):
     return tr_loss / counter
 
 
-def train_fn_forcaster(data_loader, model, optimizer, device, verbose , is_added_auto_encoder ):
+def train_fn_forcaster(
+    data_loader, model, optimizer, device, verbose, is_added_auto_encoder
+):
     """
     computes the model training for one epoch
     """
@@ -89,12 +91,12 @@ def train_fn_forcaster(data_loader, model, optimizer, device, verbose , is_added
         day = d["dayOfweek"].to(device, dtype=torch.long)
         hour = d["hour"].to(device, dtype=torch.long)
         optimizer.zero_grad()
-        if is_added_auto_encoder == False : 
+        if is_added_auto_encoder == False:
             outputs = model(enc, day, hour)
             loss = L2_loss_fn(outputs, targets)
-        else : 
-            outputs , reconstructed = model(enc, day, hour)
-            loss = L2_loss_fn(outputs, targets) + L1_loss_fn(reconstructed, enc) 
+        else:
+            outputs, reconstructed = model(enc, day, hour)
+            loss = L2_loss_fn(outputs, targets) + L1_loss_fn(reconstructed, enc)
 
         tr_loss += loss.item()
         counter += 1
@@ -133,7 +135,7 @@ def eval_fn_autoencoder(data_loader, model, device, verbose):
         return fin_loss / counter
 
 
-def eval_fn_forcaster(data_loader, model, device, verbose , is_added_auto_encoder ):
+def eval_fn_forcaster(data_loader, model, device, verbose, is_added_auto_encoder):
     """
     computes the model evaluation for one epoch
     """
@@ -151,13 +153,13 @@ def eval_fn_forcaster(data_loader, model, device, verbose , is_added_auto_encode
             enc = d["num_feat"].to(device, dtype=torch.float)
             day = d["dayOfweek"].to(device, dtype=torch.long)
             hour = d["hour"].to(device, dtype=torch.long)
-            if is_added_auto_encoder == False : 
+            if is_added_auto_encoder == False:
                 outputs = model(enc, day, hour)
                 loss = L2_loss_fn(outputs, targets)
-            else : 
-                outputs , reconstructed = model(enc, day, hour)
-                loss = L2_loss_fn(outputs, targets) + L1_loss_fn(reconstructed, enc) 
-            
+            else:
+                outputs, reconstructed = model(enc, day, hour)
+                loss = L2_loss_fn(outputs, targets) + L1_loss_fn(reconstructed, enc)
+
             fin_loss += loss.item()
             counter += 1
             if verbose:
@@ -178,8 +180,8 @@ def run(
     device,
     path,
     verbose,
-    is_forcaster = True,
-    is_added_auto_encoder = False, 
+    is_forcaster=True,
+    is_added_auto_encoder=False,
 ):
     """
     trains a given model for a given number of epochs and paramters
@@ -207,7 +209,12 @@ def run(
 
         if is_forcaster:
             tr_loss = train_fn_forcaster(
-                train_data_loader, model, optimizer, device, verbose, is_added_auto_encoder
+                train_data_loader,
+                model,
+                optimizer,
+                device,
+                verbose,
+                is_added_auto_encoder,
             )
 
         else:
@@ -223,9 +230,13 @@ def run(
             print(f" train_loss  = {tr_loss}")
 
         if is_forcaster:
-            val = eval_fn_forcaster(valid_data_loader, model, device, verbose , is_added_auto_encoder)
+            val = eval_fn_forcaster(
+                valid_data_loader, model, device, verbose, is_added_auto_encoder
+            )
         else:
-            val = eval_fn_autoencoder(valid_data_loader, model, device, verbose, is_added_auto_encoder)
+            val = eval_fn_autoencoder(
+                valid_data_loader, model, device, verbose, is_added_auto_encoder
+            )
 
         val_loss.append(val)
         scheduler.step(val)
@@ -249,7 +260,7 @@ def run(
     return val_loss, train_loss
 
 
-def predict(model, dataset, device=torch.device("cuda") , is_added_auto_encoder = False):
+def predict(model, dataset, device=torch.device("cuda"), is_added_auto_encoder=False):
     """
     computes the prediction a given model and data
     """
@@ -265,12 +276,12 @@ def predict(model, dataset, device=torch.device("cuda") , is_added_auto_encoder 
             enc = d["num_feat"].to(device, dtype=torch.float)
             day = d["dayOfweek"].to(device, dtype=torch.long)
             hour = d["hour"].to(device, dtype=torch.long)
-            
-            if is_added_auto_encoder : 
-                outputs , _ = model(enc, day, hour)
-            else : 
+
+            if is_added_auto_encoder:
+                outputs, _ = model(enc, day, hour)
+            else:
                 outputs = model(enc, day, hour)
-                
+
             if bi == 0:
                 out = outputs
             else:
