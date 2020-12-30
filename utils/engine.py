@@ -93,7 +93,7 @@ def train_fn_forcaster(data_loader, model, optimizer, device, verbose , is_added
             outputs = model(enc, day, month)
             loss = L2_loss_fn(outputs, targets)
         else : 
-            outputs , reconstructed = model(enc, day, hour)
+            outputs , reconstructed = model(enc, day, month)
             loss = L2_loss_fn(outputs, targets) + L1_loss_fn(reconstructed, enc) 
 
         tr_loss += loss.item()
@@ -155,7 +155,7 @@ def eval_fn_forcaster(data_loader, model, device, verbose , is_added_auto_encode
                 outputs = model(enc, day, month)
                 loss = L2_loss_fn(outputs, targets)
             else : 
-                outputs , reconstructed = model(enc, day, hour)
+                outputs , reconstructed = model(enc, day, month)
                 loss = L2_loss_fn(outputs, targets) + L1_loss_fn(reconstructed, enc) 
             
             fin_loss += loss.item()
@@ -269,7 +269,7 @@ def predict(model, dataset, device=torch.device("cuda") , is_added_auto_encoder 
             if is_added_auto_encoder : 
                 outputs , _ = model(enc, day, month)
             else : 
-                outputs = model(enc, day, hour)
+                outputs = model(enc, day, month)
                 
             if bi == 0:
                 out = outputs
