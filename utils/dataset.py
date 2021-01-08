@@ -76,9 +76,7 @@ class hydro_dataset_transfer_learning:
         index = []
         for station in station_list:
             target.append(data[data["ID"] == station].WL_pct.values[window_size:])
-            index.append(
-                data[data["ID"] == station].index.values[window_size:]
-            )
+            index.append(data[data["ID"] == station].index.values[window_size:])
 
         self.target = np.concatenate(target)
         self.index = np.concatenate(index)
