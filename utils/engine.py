@@ -158,7 +158,7 @@ def eval_fn_forcaster(data_loader, model, device, verbose, is_added_auto_encoder
                 loss = L2_loss_fn(outputs, targets)
             else:
                 outputs, reconstructed = model(enc, day, month)
-                loss = L2_loss_fn(outputs, targets) + L1_loss_fn(reconstructed, enc)
+                loss = L2_loss_fn(outputs, targets) 
 
             fin_loss += loss.item()
             counter += 1
