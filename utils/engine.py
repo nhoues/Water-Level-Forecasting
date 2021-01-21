@@ -96,7 +96,7 @@ def train_fn_forcaster(
             loss = L2_loss_fn(outputs, targets)
         else:
             outputs, reconstructed = model(enc, day, month)
-            loss = L2_loss_fn(outputs, targets) + L1_loss_fn(reconstructed, enc)
+            loss = L2_loss_fn(outputs, targets) + 0.1*L1_loss_fn(reconstructed, enc)
 
         tr_loss += loss.item()
         counter += 1
