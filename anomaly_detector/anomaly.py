@@ -31,7 +31,6 @@ import matplotlib.pyplot as plt
 from matplotlib import pyplot
 import plotly.graph_objs as go
 import chart_studio.plotly as py
-%matplotlib inline
 
 def configure_plotly_browser_state():
   import IPython
