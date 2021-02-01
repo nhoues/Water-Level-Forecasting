@@ -32,11 +32,6 @@ class AverageMeter:
         self.count += n
         self.avg = self.sum / self.count
 
-
-def L2_loss_fn(y_hat, y):
-    return nn.MSELoss()(y_hat, y)
-
-
 def L1_loss_fn(y_hat, y):
     return nn.L1Loss()(y_hat, y)
 
@@ -71,7 +66,7 @@ def train_fn_autoencoder(data_loader, model, optimizer, device, verbose):
 
 
 def train_fn_forcaster(
-    data_loader, model, optimizer, device, verbose, is_added_auto_encoder
+    data_loader, model, optimizer, device, verbose, is_added_auto_encoder , loss_fn  
 ):
     """
     computes the model training for one epoch
@@ -93,10 +88,10 @@ def train_fn_forcaster(
         optimizer.zero_grad()
         if is_added_auto_encoder == False:
             outputs = model(enc, day, month)
-            loss = L2_loss_fn(outputs, targets)
+            loss = loss_fn(outputs, targets)
         else:
             outputs, reconstructed = model(enc, day, month)
-            loss = L2_loss_fn(outputs, targets) + 0.1*L1_loss_fn(reconstructed, enc)
+            loss = loss_fn(outputs, targets) + 0.1*L1_loss_fn(reconstructed, enc)
 
         tr_loss += loss.item()
         counter += 1
@@ -135,7 +130,7 @@ def eval_fn_autoencoder(data_loader, model, device, verbose):
         return fin_loss / counter
 
 
-def eval_fn_forcaster(data_loader, model, device, verbose, is_added_auto_encoder):
+def eval_fn_forcaster(data_loader, model, device, verbose, is_added_auto_encoder , loss_fn ):
     """
     computes the model evaluation for one epoch
     """
@@ -155,10 +150,10 @@ def eval_fn_forcaster(data_loader, model, device, verbose, is_added_auto_encoder
             month = d["month"].to(device, dtype=torch.long)
             if is_added_auto_encoder == False:
                 outputs = model(enc, day, month)
-                loss = L2_loss_fn(outputs, targets)
+                loss = loss_fn(outputs, targets)
             else:
                 outputs, reconstructed = model(enc, day, month)
-                loss = L2_loss_fn(outputs, targets) 
+                loss = loss_fn(outputs, targets) 
 
             fin_loss += loss.item()
             counter += 1
@@ -180,8 +175,10 @@ def run(
     device,
     path,
     verbose,
+    loss_fn = nn.MSELoss() , 
     is_forcaster=True,
     is_added_auto_encoder=False,
+    
 ):
     """
     trains a given model for a given number of epochs and paramters
@@ -215,6 +212,7 @@ def run(
                 device,
                 verbose,
                 is_added_auto_encoder,
+                loss_fn 
             )
 
         else:
@@ -231,7 +229,7 @@ def run(
 
         if is_forcaster:
             val = eval_fn_forcaster(
-                valid_data_loader, model, device, verbose, is_added_auto_encoder
+                valid_data_loader, model, device, verbose, is_added_auto_encoder , loss_fn
             )
         else:
             val = eval_fn_autoencoder(valid_data_loader, model, device, verbose)
