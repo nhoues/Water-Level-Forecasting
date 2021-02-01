@@ -1,4 +1,5 @@
 import datetime
+import tqdm 
 from datetime import date
 import pandas as pd
 import numpy as np
